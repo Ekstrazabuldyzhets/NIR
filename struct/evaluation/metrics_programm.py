@@ -12,19 +12,7 @@ def compute_rmse(y_true, y_pred):
     rmse_pct = rmse_abs / mean_capacity * 100 if mean_capacity > 0 else 0.0
     return {'rmse_abs': rmse_abs,'rmse_pct': rmse_pct,}
 
-
-# LIPSCHITZ — УСТОЙЧИВОСТЬ К ШУМУ
 def evaluate_lipschitz(model, X, epsilon=0.01, n_trials=10):
-    """
-    Оценка Lipschitz-константы.
-
-    Идея:
-        L ≈ ||f(x + ε·δ) - f(x)|| / (ε · ||δ||)
-        усредняем по n_trials шумовым реализациям.
-
-    model: имеет .predict(X) → (N, P)
-    X: (N, L, d) — нормализованные данные (Target)
-    """
     # Чистое предсказание
     y_clean = model.predict(X)
 
@@ -57,17 +45,7 @@ def _interpret_lipschitz(L):
     else:
         return "Чувствительна к шуму"
 
-def evaluate_all(model, X, y_true, epsilon=0.01, n_trials=10,
-                 with_lipschitz=True):
-    """
-    Полная оценка модели на (X, y_true).
-
-    model: имеет .predict(X)
-    X: (N, L, d) — нормализованные данные (Target)
-    y_true: (N, P) — истинные значения (в исходных единицах)
-
-    Возвращает dict со всеми метриками.
-    """
+def evaluate_all(model, X, y_true, epsilon=0.01, n_trials=10, with_lipschitz=True):
     y_pred = model.predict(X)
 
     mae = compute_mae(y_true, y_pred)
