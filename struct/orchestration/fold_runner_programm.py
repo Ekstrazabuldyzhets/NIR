@@ -1,21 +1,3 @@
-"""
-Логика ОДНОГО фолда.
-
-Порядок шагов:
-    1. Склейка
-    2. MMD до
-    3. Нормализация
-    4. CORAL
-    5. MMD после
-    6. Обучение модели (+ сохранение Source-данных)
-    7. GPR на остатках Source
-    8. Оценка zero-shot
-    9. Адаптация
-    10. Переобучение GPR на Target
-    11. Оценка после
-    12. Lipschitz
-    13. κ(K)
-"""
 import numpy as np
 
 from data.file_reader_programm import stack_data
