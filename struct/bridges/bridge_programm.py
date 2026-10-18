@@ -1,10 +1,3 @@
-"""
-Идея:
-    c_target → [МОСТ] → c_source'
-    где c_source' — синтетический контекст, который декодер
-    «думает», что получил от Source.
-"""
-
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
