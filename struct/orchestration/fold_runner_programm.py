@@ -7,7 +7,7 @@ from correctors.corrector_programm import (CORRECTOR_REGISTRY, extract_gpr_featu
 from evaluation.metrics_programm import (compute_mae, compute_rmse, evaluate_lipschitz,)
 from adaptation.adaptation_programm import ADAPTER_REGISTRY
 
-# ОБЁРТКА МОДЕЛИ С GPR
+
 class ModelWithGPR:
     # LSTM (с опциональным мостом) + GPR-коррекция
     def __init__(self, model, corrector):
@@ -185,7 +185,7 @@ def run_fold(fold, cfg) -> dict:
         print(f"Lipschitz L: {lipschitz['L_mean']:.4f} "
               f"→ {lipschitz['interpretation']}")
 
-    #  κ(K) - число обусловленности GPR
+    # κ(K) - число обусловленности GPR
     # показывает обусловленность матрицы.
     # Если κ большое - обращение нестабильно. GPR может давать плохие предсказания.
     gpr_stability = corrector_target.get_stability_report()
