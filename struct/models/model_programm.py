@@ -1,14 +1,3 @@
-"""
-Модель Encoder-Decoder на BiLSTM с Attention.
-
-Поддерживает:
-    - обычное обучение на Source
-    - извлечение контекста (для GPR, bridge, DANN)
-    - заморозку энкодера
-    - построение decoder-only модели для моста
-    - предсказание с мостом (если установлен)
-"""
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (Input, Dense, LSTM, Bidirectional, RepeatVector, Attention, Concatenate)
@@ -19,8 +8,7 @@ class LSTMAttentionModel:
     ENCODER_LAYERS = ['encoder_lstm1', 'encoder_lstm2']
     DECODER_LAYERS = ['decoder_lstm1', 'attention', 'decoder_lstm2', 'output']
 
-    def __init__(self, input_dim: int, output_dim: int, hidden_units: int = 64, learning_rate: float = 1e-4,
-                 verbose: bool = True):
+    def __init__(self, input_dim: int, output_dim: int, hidden_units: int = 64, learning_rate: float = 1e-4, verbose: bool = True):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_units = hidden_units
@@ -36,7 +24,6 @@ class LSTMAttentionModel:
     # Сборка
     def build(self):
         inp = Input(shape=(None, self.input_dim), name='encoder_input')
-
         # энкодер реализуем в два слоя
         # (batch, 6, 9) → (batch, 6, 128);
         # (batch, 6, 128) → (batch, 6, 128);
@@ -71,9 +58,6 @@ class LSTMAttentionModel:
     def fit(self, X, y, epochs=100, batch_size=32, patience=30, validation_split=0.0, verbose=0):
         # Разбиение: 90% train, 10% val
         # Обучение 300 эпох
-        # Callback'и:
-        # ReduceLROnPlateau - если loss не падает 15 эпох → lr × 0.5
-        # EarlyStopping - если val_loss не улучшается 30 эпох → стоп
         if self.model is None:
             raise RuntimeError("Сначала вызови build()")
 
@@ -83,8 +67,7 @@ class LSTMAttentionModel:
         if patience and validation_split > 0:
             callbacks.append(tf.keras.callbacks.EarlyStopping(patience=patience, restore_best_weights=True))
 
-        history = self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_split=validation_split,
-                                 callbacks=callbacks, verbose=verbose)
+        history = self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_split=validation_split, callbacks=callbacks, verbose=verbose)
         return history
 
     # Предсказание (с поддержкой моста)
@@ -137,18 +120,10 @@ class LSTMAttentionModel:
     def recompile(self, learning_rate=None):
         if learning_rate is not None:
             self.learning_rate = learning_rate
-        self.model.compile(
-            optimizer=Adam(learning_rate=self.learning_rate),
-            loss='mse',
-            metrics=['mae'],
-        )
+        self.model.compile(optimizer=Adam(learning_rate=self.learning_rate), loss='mse', metrics=['mae'])
 
     # Decoder-only модель (для BridgeAdapter)
     def build_decoder_from_context(self):
-        """
-        Создаёт модель: context (batch, 128) → y_pred (batch, 6).
-        Копирует веса decoder-слоёв из основной модели.
-        """
         h = self.hidden_units * 2  # 128
 
         ctx = Input(shape=(h,), name='synthetic_context')
@@ -156,11 +131,7 @@ class LSTMAttentionModel:
 
         # decoder_lstm1
         dec_lstm1_orig = self.model.get_layer('decoder_lstm1')
-        x = Bidirectional(
-            LSTM(dec_lstm1_orig.forward_layer.units,
-                 return_sequences=True),
-            name='dec_lstm1_copy',
-        )(dec_in)
+        x = Bidirectional(LSTM(dec_lstm1_orig.forward_layer.units, return_sequences=True), name='dec_lstm1_copy')(dec_in)
 
         # Self-attention (вместо attention к энкодеру)
         attn = Attention(name='attn_copy')([x, x])
@@ -168,11 +139,7 @@ class LSTMAttentionModel:
 
         # decoder_lstm2
         dec_lstm2_orig = self.model.get_layer('decoder_lstm2')
-        x2 = Bidirectional(
-            LSTM(dec_lstm2_orig.forward_layer.units,
-                 return_sequences=False),
-            name='dec_lstm2_copy',
-        )(comb)
+        x2 = Bidirectional(LSTM(dec_lstm2_orig.forward_layer.units, return_sequences=False), name='dec_lstm2_copy')(comb)
 
         out = Dense(self.output_dim, name='output_copy')(x2)
 
@@ -180,25 +147,15 @@ class LSTMAttentionModel:
 
         # Копируем веса
         dec_lstm1_copy = decoder_model.get_layer('dec_lstm1_copy')
-        dec_lstm1_copy.forward_layer.set_weights(
-            dec_lstm1_orig.forward_layer.get_weights()
-        )
-        dec_lstm1_copy.backward_layer.set_weights(
-            dec_lstm1_orig.backward_layer.get_weights()
-        )
+        dec_lstm1_copy.forward_layer.set_weights(dec_lstm1_orig.forward_layer.get_weights())
+        dec_lstm1_copy.backward_layer.set_weights(dec_lstm1_orig.backward_layer.get_weights())
 
         dec_lstm2_copy = decoder_model.get_layer('dec_lstm2_copy')
-        dec_lstm2_copy.forward_layer.set_weights(
-            dec_lstm2_orig.forward_layer.get_weights()
-        )
-        dec_lstm2_copy.backward_layer.set_weights(
-            dec_lstm2_orig.backward_layer.get_weights()
-        )
+        dec_lstm2_copy.forward_layer.set_weights(dec_lstm2_orig.forward_layer.get_weights())
+        dec_lstm2_copy.backward_layer.set_weights(dec_lstm2_orig.backward_layer.get_weights())
 
         output_layer = self.model.get_layer('output')
-        decoder_model.get_layer('output_copy').set_weights(
-            output_layer.get_weights()
-        )
+        decoder_model.get_layer('output_copy').set_weights(output_layer.get_weights())
 
         self.decoder_model = decoder_model
         return decoder_model
@@ -220,8 +177,7 @@ class LSTMAttentionModel:
 
     # Утилита
     def count_trainable(self) -> tuple:
-        trainable = int(np.sum([np.prod(w.shape)
-                                for w in self.model.trainable_weights]))
+        trainable = int(np.sum([np.prod(w.shape) for w in self.model.trainable_weights]))
         total = int(np.sum([np.prod(w.shape) for w in self.model.weights]))
         return trainable, total
 
