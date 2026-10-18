@@ -1,40 +1,9 @@
-"""
-GPR-корректор ошибок LSTM.
-
-Особенности (из монолита):
-    1. Multi-scale RBF ядро: сумма трёх RBF с разными length scales
-       (0.5, 2.0, 5.0) + WhiteKernel
-    2. Проверка числа обусловленности κ(K):
-       если > 1e10 → автоувеличение alpha (1e-6 → 1e-3)
-    3. Внутренняя стандартизация X и y (StandardScaler)
-    4. Фича-инжиниринг: 13 признаков (8 из контекста энкодера +
-       5 статистик последовательности)
-
-Модуль НЕ знает:
-    - про модель, адаптеры, метрики
-    - откуда данные
-
-Модуль ЗНАЕТ:
-    - как обучить GPR на остатках
-    - как предсказать коррекцию
-    - как проверить устойчивость (κ(K))
-"""
-
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import (RBF, WhiteKernel, ConstantKernel)
 from sklearn.preprocessing import StandardScaler
 
 def extract_gpr_features(X, context):
-    # Извлекает 13 признаков для GPR из X и контекста энкодера.
-    # Вход:
-    #     X: (N, L, d) - нормализованная последовательность
-    #     context: (N, L, 2h) - выход encoder_lstm2 (128 при h=64)
-
-    # Контекст энкодера (8 компонент) - латентное описание.
-    # LSTM уже сжал всю последовательность в 128 чисел. Берём первые 8 - они богаче, чем сырые X.
-    # Статистики X (5 чисел) — явные характеристики. Последнее значение, среднее, std.
-
     N = X.shape[0]
     features = []
 
