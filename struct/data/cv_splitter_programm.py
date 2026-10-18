@@ -1,10 +1,3 @@
-"""
-Разбиваем АВТО, на окна.
-Source и Target меняются на каждом фолде.
-Два режима:
-    1. same_file:      Source и Target из одного пула авто
-    2. separate_files: Source фиксирован, Target разбивается
-"""
 import numpy as np
 from sklearn.model_selection import KFold
 
@@ -15,7 +8,7 @@ class CVSplitter:
         self.mode = mode
         self.verbose = verbose
 
-    # Режим 1: один пул — разбиваем и source, и target
+    # разбиваем и source, и target
     def split_same_file(self, pool_data):
         n_vehicles = len(pool_data)
 
@@ -37,7 +30,7 @@ class CVSplitter:
 
         return folds
 
-    # Режим 2: source фиксирован, target разбивается
+    # source фиксирован, target разбивается
     def split_separate_files(self, source_data, target_data):
         n_target = len(target_data)
 
@@ -50,7 +43,6 @@ class CVSplitter:
 
         return folds
 
-    # Публичный API
     def split(self, source_data, target_data) -> list:
         if self.mode == 'same_file':
             folds = self.split_same_file(source_data)
