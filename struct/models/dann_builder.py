@@ -1,13 +1,4 @@
-"""
-Сборка DANN-модели на основе обученной базовой модели.
-Структура:
-    Вход X → [Энкодер] → context
-                          ├──→ [Регрессор] → soc_output (batch, 6)
-                          └──→ [GRL] → [Классификатор] → domain_output (batch, 2)
-"""
-
-from tensorflow.keras.layers import (Input, Dense, Dropout, LSTM, Bidirectional, RepeatVector,
-                                     Attention, Concatenate)
+from tensorflow.keras.layers import (Input, Dense, Dropout, LSTM, Bidirectional, RepeatVector, Attention, Concatenate)
 from tensorflow.keras.models import Model
 
 from models.dann_layers import GradientReversalLayer
@@ -20,18 +11,14 @@ def build_dann_model(base_model, hidden_units=64, domain_hidden=64):
     # Context = последний шаг
     context = encoder_output_tensor[:, -1, :]
 
-    # ===== Ветка регрессора (SoC) =====
     decoder_inputs = RepeatVector(1)(context)
-    decoder_lstm1 = Bidirectional(LSTM(hidden_units, return_sequences=True, dropout=0.2),
-                                  name='dann_decoder_lstm1')(decoder_inputs)
+    decoder_lstm1 = Bidirectional(LSTM(hidden_units, return_sequences=True, dropout=0.2), name='dann_decoder_lstm1')(decoder_inputs)
     attention_output = Attention(name='dann_attention')([decoder_lstm1, encoder_output_tensor])
     combined = Concatenate(name='dann_concat')([decoder_lstm1, attention_output])
-    decoder_lstm2 = Bidirectional(LSTM(hidden_units, return_sequences=False, dropout=0.2),
-                                  name='dann_decoder_lstm2')(combined)
+    decoder_lstm2 = Bidirectional(LSTM(hidden_units, return_sequences=False, dropout=0.2), name='dann_decoder_lstm2')(combined)
     # регрессор SoC
     soc_output = Dense(6, name='soc_output')(decoder_lstm2)
 
-    # ===== Ветка домен-классификатора (через GRL) =====
     grl = GradientReversalLayer(alpha=0.0, name='grl')
     context_for_grl = grl(context)
     domain_hidden_layer = Dense(domain_hidden, activation='relu', name='domain_hidden')(context_for_grl)
@@ -47,7 +34,6 @@ def build_dann_model(base_model, hidden_units=64, domain_hidden=64):
     return dann_model
 
 def copy_weights(base_model, dann_model):
-    """Копирует веса decoder-слоёв и output из base_model в dann_model."""
     # decoder_lstm1
     base_dec1 = base_model.model.get_layer('decoder_lstm1')
     dann_dec1 = dann_model.get_layer('dann_decoder_lstm1')
